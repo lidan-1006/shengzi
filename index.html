@@ -41,9 +41,9 @@
     <div class="quiz-feedback" id="quizFeedback"></div>
     <div class="quiz-buttons">
         <button class="btn btn-secondary" onclick="nextQuiz()">🎲 出题</button>
-        <button class="btn btn-orange"    onclick="showHint()">💡 提示</button>
-        <button class="btn btn-success"   onclick="markLearned()">😊 认识</button>
-        <button class="btn btn-danger"    onclick="markUnlearned()">🤔 不认识</button>
+        <button class="btn btn-orange" onclick="showHint()">💡 提示</button>
+        <button class="btn btn-success" onclick="markLearned()">😊 认识</button>
+        <button class="btn btn-danger" onclick="markUnlearned()">🤔 不认识</button>
     </div>
 </div>
 
@@ -178,16 +178,13 @@
             return;
         }
 
-        const allWords = [...data.unlearned, ...data.learned].map(w => w.word.toLowerCase());
-        const key = (currentInputLang === "英文" ? word.toLowerCase() : word);
         const exists = [...data.unlearned, ...data.learned].some(w => {
             if ((w.lang || "中文") !== currentInputLang) return false;
-            return currentInputLang === "英文"
-                ? w.word.toLowerCase() === key
-                : w.word === key;
+            if (currentInputLang === "英文") return (w.word || "").toLowerCase() === word.toLowerCase();
+            return w.word === word;
         });
 
-        if (exists || allWords.includes(word.toLowerCase())) {
+        if (exists) {
             showInputStatus(`⚠️ "${word}" 已经在生字本里啦`, "var(--orange)");
             return;
         }
