@@ -1,510 +1,759 @@
-<div class="nav">
-    <button class="nav-btn active" onclick="switchPage(0)">✏️ 录入</button>
-    <button class="nav-btn" onclick="switchPage(1)">🎯 测验</button>
-    <button class="nav-btn" onclick="switchPage(2)">📚 词库</button>
-    <button class="nav-btn" onclick="switchPage(3)">🎨 主题</button>
-</div>
-
-<div class="page active" id="page0">
-    <div class="input-title">✏️ 写下你不认识的字吧！</div>
-    <div class="input-group">
-        <label>语言类型</label>
-        <div class="lang-toggle">
-            <button class="lang-btn active" id="btnCN" onclick="setInputLang('中文')">🀄 中文</button>
-            <button class="lang-btn" id="btnEN" onclick="setInputLang('英文')">🔤 英文</button>
-        </div>
-    </div>
-    <div class="input-group">
-        <label id="wordLabel">生字</label>
-        <input type="text" id="wordInput" placeholder="输入不认识的字/词">
-    </div>
-    <div class="input-group">
-        <label id="noteLabel">拼音/注释（可选）</label>
-        <input type="text" id="noteInput" class="note-input" placeholder="输入拼音或解释">
-    </div>
-    <button class="btn btn-success" onclick="addWord()">+ 添加到生字本</button>
-    <div class="status-msg" id="inputStatus"></div>
-    <div class="stats-bar" id="statsBar"></div>
-</div>
-
-<div class="page" id="page1">
-    <div class="input-title">🎯 看看你认不认识这个字</div>
-    <div class="quiz-lang-bar">
-        <button class="quiz-lang-btn active" onclick="setQuizLang('全部')">全部</button>
-        <button class="quiz-lang-btn" onclick="setQuizLang('中文')">🀄 中文</button>
-        <button class="quiz-lang-btn" onclick="setQuizLang('英文')">🔤 英文</button>
-    </div>
-    <div class="quiz-card">
-        <div class="quiz-word" id="quizWord">点击出题</div>
-    </div>
-    <div class="quiz-hint" id="quizHint"></div>
-    <div class="quiz-feedback" id="quizFeedback"></div>
-    <div class="quiz-buttons">
-        <button class="btn btn-secondary" onclick="nextQuiz()">🎲 出题</button>
-        <button class="btn btn-orange" onclick="showHint()">💡 提示</button>
-        <button class="btn btn-success" onclick="markLearned()">😊 认识</button>
-        <button class="btn btn-danger" onclick="markUnlearned()">🤔 不认识</button>
-    </div>
-</div>
-
-<div class="page" id="page2">
-    <div class="filter-section">
-        <div class="filter-label">语言</div>
-        <div class="filter-bar" id="langFilterBar">
-            <button class="filter-btn active" onclick="setLangFilter('全部')">全部</button>
-            <button class="filter-btn" onclick="setLangFilter('中文')">🀄 中文</button>
-            <button class="filter-btn" onclick="setLangFilter('英文')">🔤 英文</button>
-        </div>
-    </div>
-    <div class="filter-section">
-        <div class="filter-label">状态</div>
-        <div class="filter-bar" id="statusFilterBar">
-            <button class="filter-btn active" onclick="setStatusFilter('全部')">全部</button>
-            <button class="filter-btn" onclick="setStatusFilter('未学')">📖 未学</button>
-            <button class="filter-btn" onclick="setStatusFilter('已学')">⭐ 已学</button>
-        </div>
-    </div>
-    <div class="word-list" id="wordList"></div>
-</div>
-
-<div class="page" id="page3">
-    <div class="input-title">🎨 选择你喜欢的背景</div>
-    <div class="theme-grid" id="themeGrid"></div>
-</div>
-
-<script>
-    const THEMES = [
-        { name: "阳光", bg: "#FFF8E7", primary: "#FF6B6B", secondary: "#4ECDC4", accent: "#FFE66D", success: "#51CF66", danger: "#FF6B6B", purple: "#CC5DE8", blue: "#339AF0", orange: "#FF922B", text: "#2D3436", lightText: "#636E72", cardBg: "#FFFFFF" },
-        { name: "海洋", bg: "#E3F2FD", primary: "#1976D2", secondary: "#00ACC1", accent: "#80DEEA", success: "#26A69A", danger: "#E53935", purple: "#5C6BC0", blue: "#1565C0", orange: "#FB8C00", text: "#1A237E", lightText: "#546E7A", cardBg: "#F1F8FF" },
-        { name: "森林", bg: "#E8F5E9", primary: "#388E3C", secondary: "#66BB6A", accent: "#C5E1A5", success: "#2E7D32", danger: "#D32F2F", purple: "#7B1FA2", blue: "#0288D1", orange: "#F57C00", text: "#1B5E20", lightText: "#4E342E", cardBg: "#F1F8E9" },
-        { name: "星空", bg: "#EDE7F6", primary: "#7B1FA2", secondary: "#BA68C8", accent: "#CE93D8", success: "#43A047", danger: "#E53935", purple: "#6A1B9A", blue: "#283593", orange: "#FF7043", text: "#311B92", lightText: "#5E35B1", cardBg: "#F3E5F5" },
-        { name: "糖果", bg: "#FFF0F5", primary: "#EC407A", secondary: "#F48FB1", accent: "#F8BBD0", success: "#66BB6A", danger: "#E53935", purple: "#AB47BC", blue: "#42A5F5", orange: "#FFA726", text: "#880E4F", lightText: "#AD1457", cardBg: "#FFF8FA" },
-    ];
-
-    const PRAISE    = ["太棒了！你真聪明！🌟", "哇！你认识这个字！👏", "真厉害！继续加油！🎉", "你是识字小达人！⭐", "好样的！越来越棒了！🏆", "太了不起了！🎊", "你的脑瓜真灵光！💡"];
-    const ENCOURAGE = ["没关系，再记一记！📖", "下次一定能认出来！💪", "慢慢来，你一定行！🌱", "多看几遍就记住啦！📝", "加油！你可以的！🌟"];
-
-    let data = { unlearned: [], learned: [], score: 0, themeIndex: 0 };
-
-    let currentInputLang  = "中文";
-    let currentQuizLang   = "全部";
-    let currentLangFilter   = "全部";
-    let currentStatusFilter = "全部";
-    let currentWord = null;
-    let currentAudio = null;
-
-    function saveData() {
-        localStorage.setItem("shengzi_data_v2", JSON.stringify(data));
-    }
-
-    function loadData() {
-        const saved = localStorage.getItem("shengzi_data_v2");
-        if (saved) {
-            data = JSON.parse(saved);
-            data.score      = data.score      || 0;
-            data.themeIndex = data.themeIndex || 0;
-            [...data.unlearned, ...data.learned].forEach(w => { if (!w.lang) w.lang = "中文"; });
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="生字乐园">
+    <title>生字学习乐园</title>
+    <style>
+        :root {
+            --bg: #FFF8E7;
+            --primary: #FF6B6B;
+            --secondary: #4ECDC4;
+            --accent: #FFE66D;
+            --success: #51CF66;
+            --danger: #FF6B6B;
+            --purple: #CC5DE8;
+            --blue: #339AF0;
+            --orange: #FF922B;
+            --text: #2D3436;
+            --light-text: #636E72;
+            --white: #FFFFFF;
+            --card-bg: #FFFFFF;
         }
-        const oldSaved = localStorage.getItem("shengzi_data");
-        if (!saved && oldSaved) {
-            const old = JSON.parse(oldSaved);
-            data.unlearned  = (old.unlearned || []).map(w => ({ ...w, lang: w.lang || "中文" }));
-            data.learned    = (old.learned   || []).map(w => ({ ...w, lang: w.lang || "中文" }));
-            data.score      = old.score      || 0;
-            data.themeIndex = old.themeIndex || 0;
-            saveData();
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: -apple-system, "微软雅黑", "PingFang SC", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
         }
-    }
 
-    function switchPage(idx) {
-        document.querySelectorAll(".page").forEach((p, i) => p.classList.toggle("active", i === idx));
-        document.querySelectorAll(".nav-btn").forEach((b, i) => b.classList.toggle("active", i === idx));
-        if (idx === 2) renderWordList();
-    }
+        .header {
+            background: var(--primary);
+            color: white;
+            text-align: center;
+            padding: 16px;
+            font-size: 20px;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
 
-    function applyTheme(index) {
-        const t = THEMES[index];
-        const r = document.documentElement;
-        r.style.setProperty("--bg",         t.bg);
-        r.style.setProperty("--primary",    t.primary);
-        r.style.setProperty("--secondary",  t.secondary);
-        r.style.setProperty("--accent",     t.accent);
-        r.style.setProperty("--success",    t.success);
-        r.style.setProperty("--danger",     t.danger);
-        r.style.setProperty("--purple",     t.purple);
-        r.style.setProperty("--blue",       t.blue);
-        r.style.setProperty("--orange",     t.orange);
-        r.style.setProperty("--text",       t.text);
-        r.style.setProperty("--light-text", t.lightText);
-        r.style.setProperty("--card-bg",    t.cardBg);
-        data.themeIndex = index;
-        saveData();
-        renderThemeGrid();
-    }
+        .score-bar {
+            background: var(--accent);
+            text-align: center;
+            padding: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            color: var(--text);
+        }
 
-    function renderThemeGrid() {
-        document.getElementById("themeGrid").innerHTML = THEMES.map((t, i) => `
-            <div class="theme-card ${i === data.themeIndex ? 'selected' : ''}"
-                 style="background:${t.bg}" onclick="applyTheme(${i})">
-                <div class="theme-colors">
-                    <span style="background:${t.primary}"></span>
-                    <span style="background:${t.secondary}"></span>
-                    <span style="background:${t.accent}"></span>
-                    <span style="background:${t.success}"></span>
-                </div>
-                <div class="name" style="color:${t.text}">${t.name}</div>
+        .nav {
+            display: flex;
+            background: var(--card-bg);
+            border-bottom: 2px solid #eee;
+            position: sticky;
+            top: 52px;
+            z-index: 99;
+        }
+
+        .nav-btn {
+            flex: 1;
+            padding: 12px 8px;
+            border: none;
+            background: var(--card-bg);
+            font-size: 14px;
+            font-weight: bold;
+            color: var(--light-text);
+            cursor: pointer;
+            transition: all 0.2s;
+            border-bottom: 3px solid transparent;
+        }
+
+        .nav-btn.active { color: var(--primary); border-bottom-color: var(--primary); background: var(--bg); }
+
+        .page {
+            display: none;
+            flex: 1;
+            padding: 20px 15px;
+            animation: fadeIn 0.2s;
+        }
+
+        .page.active { display: flex; flex-direction: column; align-items: center; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .input-title { font-size: 18px; font-weight: bold; margin-bottom: 20px; }
+
+        .input-group { width: 100%; max-width: 350px; margin-bottom: 15px; }
+
+        .input-group label { display: block; font-size: 13px; color: var(--light-text); margin-bottom: 5px; }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 15px;
+            font-size: 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            outline: none;
+            transition: border-color 0.2s;
+            background: var(--card-bg);
+        }
+
+        .input-group input:focus { border-color: var(--primary); }
+        .input-group input.note-input { font-size: 16px; }
+
+        /* 语言切换 */
+        .lang-toggle { display: flex; gap: 8px; }
+
+        .lang-btn {
+            flex: 1;
+            padding: 11px 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: bold;
+            background: var(--card-bg);
+            color: var(--light-text);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .lang-btn.active {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: var(--bg);
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+        }
+
+        .btn:active { transform: scale(0.95); }
+        .btn-success { background: var(--success); }
+        .btn-primary { background: var(--primary); }
+        .btn-blue { background: var(--blue); }
+        .btn-orange { background: var(--orange); }
+        .btn-secondary { background: var(--secondary); }
+        .btn-danger { background: var(--danger); }
+        .btn-purple { background: var(--purple); }
+
+        .status-msg { margin-top: 12px; font-size: 15px; font-weight: 500; min-height: 22px; }
+
+        .stats-bar { margin-top: 25px; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+
+        .stat-badge {
+            text-align: center;
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: var(--card-bg);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            min-width: 70px;
+        }
+
+        .stat-badge .num { font-size: 22px; font-weight: bold; }
+        .stat-badge .label { font-size: 11px; color: var(--light-text); }
+
+        /* 测验 */
+        .quiz-lang-bar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .quiz-lang-btn {
+            padding: 6px 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: bold;
+            background: var(--card-bg);
+            color: var(--light-text);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .quiz-lang-btn.active { border-color: var(--primary); color: var(--primary); background: var(--bg); }
+
+        .quiz-card {
+            width: 280px;
+            height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg);
+            border: 3px solid var(--primary);
+            border-radius: 20px;
+            margin: 10px 0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        .quiz-word {
+            font-size: 52px;
+            font-weight: bold;
+            color: var(--primary);
+            font-family: "楷体", "STKaiti", serif;
+        }
+
+        .quiz-word.en { font-size: 32px; font-family: -apple-system, sans-serif; }
+
+        .quiz-hint { font-size: 15px; color: var(--secondary); min-height: 22px; margin: 6px 0; }
+        .quiz-feedback { font-size: 16px; font-weight: bold; min-height: 24px; margin: 6px 0; }
+
+        .quiz-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            width: 100%;
+            max-width: 300px;
+            margin-top: 8px;
+        }
+
+        .quiz-buttons .btn { padding: 14px 10px; font-size: 15px; border-radius: 15px; }
+
+        /* 词库 */
+        .filter-section { width: 100%; max-width: 400px; margin-bottom: 5px; }
+        .filter-label { font-size: 12px; color: var(--light-text); margin-bottom: 5px; font-weight: bold; }
+
+        .filter-bar { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+
+        .filter-btn {
+            padding: 7px 14px;
+            border: none;
+            border-radius: 15px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            background: var(--accent);
+            color: var(--text);
+            opacity: 0.6;
+            transition: all 0.2s;
+        }
+
+        .filter-btn.active { opacity: 1; background: var(--primary); color: white; }
+
+        .word-list { width: 100%; max-width: 400px; flex: 1; overflow-y: auto; }
+
+        /* 分组标题 */
+        .group-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            margin: 14px 0 6px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .group-header:first-child { margin-top: 4px; }
+
+        .group-header.unlearned { background: rgba(255, 107, 107, 0.12); color: var(--primary); }
+        .group-header.learned   { background: rgba(81, 207, 102, 0.12);  color: var(--success); }
+
+        .group-count {
+            margin-left: auto;
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: rgba(0,0,0,0.06);
+        }
+
+        .word-item {
+            display: flex;
+            align-items: center;
+            padding: 11px 14px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            margin-bottom: 7px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        }
+
+        .word-item .word {
+            font-size: 22px;
+            font-weight: bold;
+            min-width: 60px;
+            font-family: "楷体", "STKaiti", serif;
+        }
+
+        .word-item .word.en { font-size: 16px; font-family: -apple-system, sans-serif; min-width: 80px; }
+
+        .word-item .note { flex: 1; font-size: 13px; color: var(--light-text); padding: 0 6px; }
+
+        /* 语言标签 */
+        .lang-badge {
+            font-size: 11px;
+            padding: 2px 7px;
+            border-radius: 6px;
+            font-weight: bold;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .lang-badge.cn { background: rgba(255, 107, 107, 0.15); color: var(--primary); }
+        .lang-badge.en { background: rgba(51, 154, 240, 0.15);  color: var(--blue); }
+
+        .word-item .del-btn {
+            margin-left: 7px;
+            width: 27px;
+            height: 27px;
+            border: none;
+            border-radius: 50%;
+            background: var(--danger);
+            color: white;
+            font-size: 13px;
+            cursor: pointer;
+            opacity: 0.65;
+            flex-shrink: 0;
+        }
+
+        .empty-msg { text-align: center; padding: 30px; color: var(--light-text); font-size: 15px; }
+
+        /* 主题 */
+        .theme-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 350px; }
+
+        .theme-card {
+            padding: 15px;
+            border-radius: 15px;
+            cursor: pointer;
+            border: 3px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .theme-card.selected { border-color: var(--primary); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+
+        .theme-colors { display: flex; gap: 4px; margin-bottom: 8px; }
+        .theme-colors span { flex: 1; height: 25px; border-radius: 4px; }
+        .theme-card .name { text-align: center; font-size: 14px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="header">~ 生字学习乐园 ~</div>
+    <div class="score-bar" id="scoreBar">🏆 积分：0</div>
+
+    <div class="nav">
+        <button class="nav-btn active" onclick="switchPage(0)">✏️ 录入</button>
+        <button class="nav-btn" onclick="switchPage(1)">🎯 测验</button>
+        <button class="nav-btn" onclick="switchPage(2)">📚 词库</button>
+        <button class="nav-btn" onclick="switchPage(3)">🎨 主题</button>
+    </div>
+
+    <!-- 录入页面 -->
+    <div class="page active" id="page0">
+        <div class="input-title">✏️ 写下你不认识的字吧！</div>
+        <div class="input-group">
+            <label>语言类型</label>
+            <div class="lang-toggle">
+                <button class="lang-btn active" id="btnCN" onclick="setInputLang('中文')">🀄 中文</button>
+                <button class="lang-btn" id="btnEN" onclick="setInputLang('英文')">🔤 英文</button>
             </div>
-        `).join("");
-    }
+        </div>
+        <div class="input-group">
+            <label id="wordLabel">生字</label>
+            <input type="text" id="wordInput" placeholder="输入不认识的字/词">
+        </div>
+        <div class="input-group">
+            <label id="noteLabel">拼音/注释（可选）</label>
+            <input type="text" id="noteInput" class="note-input" placeholder="输入拼音或解释">
+        </div>
+        <button class="btn btn-success" onclick="addWord()">+ 添加到生字本</button>
+        <div class="status-msg" id="inputStatus"></div>
+        <div class="stats-bar" id="statsBar"></div>
+    </div>
 
-    function setInputLang(lang) {
-        currentInputLang = lang;
-        document.getElementById("btnCN").classList.toggle("active", lang === "中文");
-        document.getElementById("btnEN").classList.toggle("active", lang === "英文");
-        document.getElementById("wordLabel").textContent  = lang === "中文" ? "生字"             : "单词";
-        document.getElementById("noteLabel").textContent  = lang === "中文" ? "拼音/注释（可选）" : "中文意思（可选）";
-        document.getElementById("wordInput").placeholder  = lang === "中文" ? "输入不认识的字/词" : "Enter word or phrase";
-        document.getElementById("noteInput").placeholder  = lang === "中文" ? "输入拼音或解释"    : "输入中文意思";
-    }
+    <!-- 测验页面 -->
+    <div class="page" id="page1">
+        <div class="input-title">🎯 看看你认不认识这个字</div>
+        <div class="quiz-lang-bar">
+            <button class="quiz-lang-btn active" onclick="setQuizLang('全部')">全部</button>
+            <button class="quiz-lang-btn" onclick="setQuizLang('中文')">🀄 中文</button>
+            <button class="quiz-lang-btn" onclick="setQuizLang('英文')">🔤 英文</button>
+        </div>
+        <div class="quiz-card">
+            <div class="quiz-word" id="quizWord">点击出题</div>
+        </div>
+        <div class="quiz-hint" id="quizHint"></div>
+        <div class="quiz-feedback" id="quizFeedback"></div>
+        <div class="quiz-buttons">
+            <button class="btn btn-secondary" onclick="nextQuiz()">🎲 出题</button>
+            <button class="btn btn-orange"    onclick="showHint()">💡 提示</button>
+            <button class="btn btn-success"   onclick="markLearned()">😊 认识</button>
+            <button class="btn btn-danger"    onclick="markUnlearned()">🤔 不认识</button>
+        </div>
+    </div>
 
-    function addWord() {
-        const wordEl = document.getElementById("wordInput");
-        const noteEl = document.getElementById("noteInput");
-        const word   = wordEl.value.trim();
-        const note   = noteEl.value.trim();
+    <!-- 词库页面 -->
+    <div class="page" id="page2">
+        <div class="filter-section">
+            <div class="filter-label">语言</div>
+            <div class="filter-bar" id="langFilterBar">
+                <button class="filter-btn active" onclick="setLangFilter('全部')">全部</button>
+                <button class="filter-btn" onclick="setLangFilter('中文')">🀄 中文</button>
+                <button class="filter-btn" onclick="setLangFilter('英文')">🔤 英文</button>
+            </div>
+        </div>
+        <div class="filter-section">
+            <div class="filter-label">状态</div>
+            <div class="filter-bar" id="statusFilterBar">
+                <button class="filter-btn active" onclick="setStatusFilter('全部')">全部</button>
+                <button class="filter-btn" onclick="setStatusFilter('未学')">📖 未学</button>
+                <button class="filter-btn" onclick="setStatusFilter('已学')">⭐ 已学</button>
+            </div>
+        </div>
+        <div class="word-list" id="wordList"></div>
+    </div>
 
-        if (!word) {
-            showInputStatus("⚠️ 请输入字/词哦！", "var(--danger)");
-            return;
+    <!-- 主题页面 -->
+    <div class="page" id="page3">
+        <div class="input-title">🎨 选择你喜欢的背景</div>
+        <div class="theme-grid" id="themeGrid"></div>
+    </div>
+
+    <script>
+        const THEMES = [
+            { name: "阳光", bg: "#FFF8E7", primary: "#FF6B6B", secondary: "#4ECDC4", accent: "#FFE66D", success: "#51CF66", danger: "#FF6B6B", purple: "#CC5DE8", blue: "#339AF0", orange: "#FF922B", text: "#2D3436", lightText: "#636E72", cardBg: "#FFFFFF" },
+            { name: "海洋", bg: "#E3F2FD", primary: "#1976D2", secondary: "#00ACC1", accent: "#80DEEA", success: "#26A69A", danger: "#E53935", purple: "#5C6BC0", blue: "#1565C0", orange: "#FB8C00", text: "#1A237E", lightText: "#546E7A", cardBg: "#F1F8FF" },
+            { name: "森林", bg: "#E8F5E9", primary: "#388E3C", secondary: "#66BB6A", accent: "#C5E1A5", success: "#2E7D32", danger: "#D32F2F", purple: "#7B1FA2", blue: "#0288D1", orange: "#F57C00", text: "#1B5E20", lightText: "#4E342E", cardBg: "#F1F8E9" },
+            { name: "星空", bg: "#EDE7F6", primary: "#7B1FA2", secondary: "#BA68C8", accent: "#CE93D8", success: "#43A047", danger: "#E53935", purple: "#6A1B9A", blue: "#283593", orange: "#FF7043", text: "#311B92", lightText: "#5E35B1", cardBg: "#F3E5F5" },
+            { name: "糖果", bg: "#FFF0F5", primary: "#EC407A", secondary: "#F48FB1", accent: "#F8BBD0", success: "#66BB6A", danger: "#E53935", purple: "#AB47BC", blue: "#42A5F5", orange: "#FFA726", text: "#880E4F", lightText: "#AD1457", cardBg: "#FFF8FA" },
+        ];
+
+        const PRAISE    = ["太棒了！你真聪明！🌟", "哇！你认识这个字！👏", "真厉害！继续加油！🎉", "你是识字小达人！⭐", "好样的！越来越棒了！🏆", "太了不起了！🎊", "你的脑瓜真灵光！💡"];
+        const ENCOURAGE = ["没关系，再记一记！📖", "下次一定能认出来！💪", "慢慢来，你一定行！🌱", "多看几遍就记住啦！📝", "加油！你可以的！🌟"];
+
+        // 数据结构：每个词条包含 { word, note, id, lang }
+        // lang: "中文" | "英文"
+        let data = { unlearned: [], learned: [], score: 0, themeIndex: 0 };
+
+        let currentInputLang  = "中文";
+        let currentQuizLang   = "全部";
+        let currentLangFilter   = "全部";
+        let currentStatusFilter = "全部";
+        let currentWord = null;
+
+        // ===== 持久化 =====
+        function saveData() {
+            localStorage.setItem("shengzi_data_v2", JSON.stringify(data));
         }
 
-        const exists = [...data.unlearned, ...data.learned].some(w => {
-            if ((w.lang || "中文") !== currentInputLang) return false;
-            if (currentInputLang === "英文") return (w.word || "").toLowerCase() === word.toLowerCase();
-            return w.word === word;
-        });
-
-        if (exists) {
-            showInputStatus(`⚠️ "${word}" 已经在生字本里啦`, "var(--orange)");
-            return;
+        function loadData() {
+            const saved = localStorage.getItem("shengzi_data_v2");
+            if (saved) {
+                data = JSON.parse(saved);
+                data.score      = data.score      || 0;
+                data.themeIndex = data.themeIndex  || 0;
+                // 旧数据迁移：补充 lang 字段
+                [...data.unlearned, ...data.learned].forEach(w => { if (!w.lang) w.lang = "中文"; });
+            }
+            // 兼容旧版 key
+            const oldSaved = localStorage.getItem("shengzi_data");
+            if (!saved && oldSaved) {
+                const old = JSON.parse(oldSaved);
+                data.unlearned  = (old.unlearned || []).map(w => ({ ...w, lang: w.lang || "中文" }));
+                data.learned    = (old.learned   || []).map(w => ({ ...w, lang: w.lang || "中文" }));
+                data.score      = old.score      || 0;
+                data.themeIndex = old.themeIndex || 0;
+                saveData();
+            }
         }
 
-        data.unlearned.push({ word, note, id: Date.now(), lang: currentInputLang });
-        saveData();
-        wordEl.value = "";
-        noteEl.value = "";
-        showInputStatus(`✅ 已添加 [${currentInputLang}]：${word}`, "var(--success)");
-        updateStats();
-    }
-
-    function showInputStatus(msg, color) {
-        const el = document.getElementById("inputStatus");
-        el.textContent = msg;
-        el.style.color = color;
-    }
-
-    function updateStats() {
-        const cnU = data.unlearned.filter(w => w.lang === "中文").length;
-        const enU = data.unlearned.filter(w => w.lang === "英文").length;
-        const cnL = data.learned.filter(w => w.lang === "中文").length;
-        const enL = data.learned.filter(w => w.lang === "英文").length;
-        document.getElementById("statsBar").innerHTML = `
-            <div class="stat-badge"><div class="num" style="color:var(--primary)">${cnU}</div><div class="label">中文待学</div></div>
-            <div class="stat-badge"><div class="num" style="color:var(--blue)">${enU}</div><div class="label">英文待学</div></div>
-            <div class="stat-badge"><div class="num" style="color:var(--success)">${cnL + enL}</div><div class="label">已学</div></div>
-            <div class="stat-badge"><div class="num" style="color:var(--secondary)">${cnU + enU + cnL + enL}</div><div class="label">总计</div></div>
-        `;
-        updateScoreBar();
-    }
-
-    function updateScoreBar() {
-        const stars = "⭐".repeat(Math.min(Math.floor(data.score / 50), 10));
-        document.getElementById("scoreBar").textContent = `🏆 积分：${data.score}  ${stars}`;
-    }
-
-    function setQuizLang(lang) {
-        currentQuizLang = lang;
-        document.querySelectorAll(".quiz-lang-btn").forEach(btn => {
-            const pure = btn.textContent.replace(/[🀄🔤 ]/g, "");
-            btn.classList.toggle("active", pure === lang || btn.textContent.trim() === lang);
-        });
-    }
-
-    function getQuizPool() {
-        if (currentQuizLang === "全部") return data.unlearned;
-        return data.unlearned.filter(w => w.lang === currentQuizLang);
-    }
-
-    function nextQuiz() {
-        document.getElementById("quizFeedback").textContent = "";
-        document.getElementById("quizHint").textContent = "";
-        const pool = getQuizPool();
-        if (pool.length === 0) {
-            const wordEl = document.getElementById("quizWord");
-            wordEl.textContent = "🎉";
-            wordEl.className = "quiz-word";
-            document.getElementById("quizHint").textContent =
-                currentQuizLang === "全部" ? "太棒了！所有字都学会了！"
-                : `${currentQuizLang}词汇全部学完了！`;
-            currentWord = null;
-            return;
+        // ===== 页面切换 =====
+        function switchPage(idx) {
+            document.querySelectorAll(".page").forEach((p, i) => p.classList.toggle("active", i === idx));
+            document.querySelectorAll(".nav-btn").forEach((b, i) => b.classList.toggle("active", i === idx));
+            if (idx === 2) renderWordList();
         }
-        currentWord = pool[Math.floor(Math.random() * pool.length)];
-        const wordEl = document.getElementById("quizWord");
-        wordEl.textContent = currentWord.word;
-        wordEl.className = "quiz-word" + (currentWord.lang === "英文" ? " en" : "");
-    }
 
-    function showHint() {
-        if (!currentWord) return;
-        document.getElementById("quizHint").textContent = currentWord.note
-            ? `💡 提示：${currentWord.note}`
-            : "这个字/词没有添加注释哦";
-    }
-
-    function markLearned() {
-        if (!currentWord) return;
-        const idx = data.unlearned.findIndex(w => w.id === currentWord.id);
-        if (idx > -1) {
-            data.unlearned.splice(idx, 1);
-            data.learned.push(currentWord);
-            data.score += 10;
+        // ===== 主题 =====
+        function applyTheme(index) {
+            const t = THEMES[index];
+            const r = document.documentElement;
+            r.style.setProperty("--bg",         t.bg);
+            r.style.setProperty("--primary",    t.primary);
+            r.style.setProperty("--secondary",  t.secondary);
+            r.style.setProperty("--accent",     t.accent);
+            r.style.setProperty("--success",    t.success);
+            r.style.setProperty("--danger",     t.danger);
+            r.style.setProperty("--purple",     t.purple);
+            r.style.setProperty("--blue",       t.blue);
+            r.style.setProperty("--orange",     t.orange);
+            r.style.setProperty("--text",       t.text);
+            r.style.setProperty("--light-text", t.lightText);
+            r.style.setProperty("--card-bg",    t.cardBg);
+            data.themeIndex = index;
             saveData();
+            renderThemeGrid();
+        }
+
+        function renderThemeGrid() {
+            document.getElementById("themeGrid").innerHTML = THEMES.map((t, i) => `
+                <div class="theme-card ${i === data.themeIndex ? 'selected' : ''}"
+                     style="background:${t.bg}" onclick="applyTheme(${i})">
+                    <div class="theme-colors">
+                        <span style="background:${t.primary}"></span>
+                        <span style="background:${t.secondary}"></span>
+                        <span style="background:${t.accent}"></span>
+                        <span style="background:${t.success}"></span>
+                    </div>
+                    <div class="name" style="color:${t.text}">${t.name}</div>
+                </div>
+            `).join("");
+        }
+
+        // ===== 录入 =====
+        function setInputLang(lang) {
+            currentInputLang = lang;
+            document.getElementById("btnCN").classList.toggle("active", lang === "中文");
+            document.getElementById("btnEN").classList.toggle("active", lang === "英文");
+            document.getElementById("wordLabel").textContent  = lang === "中文" ? "生字"           : "单词";
+            document.getElementById("noteLabel").textContent  = lang === "中文" ? "拼音/注释（可选）" : "中文意思（可选）";
+            document.getElementById("wordInput").placeholder  = lang === "中文" ? "输入不认识的字/词" : "Enter word or phrase";
+            document.getElementById("noteInput").placeholder  = lang === "中文" ? "输入拼音或解释"    : "输入中文意思";
+        }
+
+        function addWord() {
+            const wordEl = document.getElementById("wordInput");
+            const noteEl = document.getElementById("noteInput");
+            const word   = wordEl.value.trim();
+            const note   = noteEl.value.trim();
+
+            if (!word) {
+                showInputStatus("⚠️ 请输入字/词哦！", "var(--danger)");
+                return;
+            }
+            const allWords = [...data.unlearned, ...data.learned].map(w => w.word);
+            if (allWords.includes(word)) {
+                showInputStatus(`⚠️ "${word}" 已经在生字本里啦`, "var(--orange)");
+                return;
+            }
+            data.unlearned.push({ word, note, id: Date.now(), lang: currentInputLang });
+            saveData();
+            wordEl.value = "";
+            noteEl.value = "";
+            showInputStatus(`✅ 已添加 [${currentInputLang}]：${word}`, "var(--success)");
             updateStats();
         }
-        const fb = document.getElementById("quizFeedback");
-        fb.textContent = PRAISE[Math.floor(Math.random() * PRAISE.length)];
-        fb.style.color = "var(--success)";
-        setTimeout(nextQuiz, 1500);
-    }
 
-    function markUnlearned() {
-        if (!currentWord) return;
-        const fb = document.getElementById("quizFeedback");
-        fb.textContent = ENCOURAGE[Math.floor(Math.random() * ENCOURAGE.length)];
-        fb.style.color = "var(--blue)";
-        setTimeout(nextQuiz, 1500);
-    }
-
-    function setLangFilter(lang) {
-        currentLangFilter = lang;
-        document.querySelectorAll("#langFilterBar .filter-btn").forEach(btn => {
-            const t = btn.textContent.trim();
-            btn.classList.toggle("active", t === lang || t.includes(lang));
-        });
-        renderWordList();
-    }
-
-    function setStatusFilter(status) {
-        currentStatusFilter = status;
-        document.querySelectorAll("#statusFilterBar .filter-btn").forEach(btn => {
-            const t = btn.textContent.trim();
-            btn.classList.toggle("active", t === status || t.includes(status));
-        });
-        renderWordList();
-    }
-
-    function filterByLang(arr) {
-        if (currentLangFilter === "全部") return arr;
-        return arr.filter(w => w.lang === currentLangFilter);
-    }
-
-    function renderWordList() {
-        const list = document.getElementById("wordList");
-        const unlearnedFiltered = filterByLang(data.unlearned);
-        const learnedFiltered   = filterByLang(data.learned);
-
-        const showUnlearned = currentStatusFilter === "全部" || currentStatusFilter === "未学";
-        const showLearned   = currentStatusFilter === "全部" || currentStatusFilter === "已学";
-
-        if (unlearnedFiltered.length + learnedFiltered.length === 0) {
-            list.innerHTML = '<div class="empty-msg">📚 还没有生字哦，快去录入吧！</div>';
-            return;
+        function showInputStatus(msg, color) {
+            const el = document.getElementById("inputStatus");
+            el.textContent = msg;
+            el.style.color = color;
         }
 
-        let html = "";
-
-        if (showUnlearned) {
-            if (unlearnedFiltered.length === 0) {
-                if (currentStatusFilter === "未学") {
-                    html += '<div class="empty-msg">📖 没有未学的字词哦！</div>';
-                }
-            } else {
-                html += `
-                    <div class="group-header unlearned">
-                        📖 未学
-                        <span class="group-count">${unlearnedFiltered.length} 个</span>
-                    </div>
-                `;
-                html += unlearnedFiltered.map(item => renderWordItem(item, "未学")).join("");
-            }
+        function updateStats() {
+            const cnU = data.unlearned.filter(w => w.lang === "中文").length;
+            const enU = data.unlearned.filter(w => w.lang === "英文").length;
+            const cnL = data.learned.filter(w => w.lang === "中文").length;
+            const enL = data.learned.filter(w => w.lang === "英文").length;
+            document.getElementById("statsBar").innerHTML = `
+                <div class="stat-badge"><div class="num" style="color:var(--primary)">${cnU}</div><div class="label">中文待学</div></div>
+                <div class="stat-badge"><div class="num" style="color:var(--blue)">${enU}</div><div class="label">英文待学</div></div>
+                <div class="stat-badge"><div class="num" style="color:var(--success)">${cnL + enL}</div><div class="label">已学</div></div>
+                <div class="stat-badge"><div class="num" style="color:var(--secondary)">${cnU + enU + cnL + enL}</div><div class="label">总计</div></div>
+            `;
+            updateScoreBar();
         }
 
-        if (showLearned) {
-            if (learnedFiltered.length === 0) {
-                if (currentStatusFilter === "已学") {
-                    html += '<div class="empty-msg">⭐ 还没有已学的字词哦！</div>';
-                }
-            } else {
-                html += `
-                    <div class="group-header learned">
-                        ⭐ 已学
-                        <span class="group-count">${learnedFiltered.length} 个</span>
-                    </div>
-                `;
-                html += learnedFiltered.map(item => renderWordItem(item, "已学")).join("");
-            }
+        function updateScoreBar() {
+            const stars = "⭐".repeat(Math.min(Math.floor(data.score / 50), 10));
+            document.getElementById("scoreBar").textContent = `🏆 积分：${data.score}  ${stars}`;
         }
 
-        list.innerHTML = html;
-    }
-
-    function renderWordItem(item, status) {
-        const isCN    = (item.lang || "中文") === "中文";
-        const langCls = isCN ? "cn" : "en";
-        const langTxt = isCN ? "中" : "EN";
-        const wordCls = isCN ? "word" : "word en";
-        return `
-            <div class="word-item">
-                <div class="${wordCls}">${item.word}</div>
-                <div class="note">${item.note || ""}</div>
-                <span class="lang-badge ${langCls}">${langTxt}</span>
-                <button class="speak-btn" onclick="speakWord(${item.id}, '${status}', this)" title="联网发音">🔊</button>
-                <button class="del-btn" onclick="deleteWord(${item.id}, '${status}')">✕</button>
-            </div>
-        `;
-    }
-
-    function deleteWord(id, status) {
-        if (status === "未学") {
-            data.unlearned = data.unlearned.filter(w => w.id !== id);
-        } else {
-            data.learned = data.learned.filter(w => w.id !== id);
-        }
-        saveData();
-        renderWordList();
-        updateStats();
-    }
-
-    async function speakWord(id, status, btn) {
-        const source = status === "未学" ? data.unlearned : data.learned;
-        const item = source.find(w => w.id === id);
-        if (!item || !item.word) return;
-
-        const word = item.word.trim();
-        const lang = item.lang || "中文";
-        const oldText = btn ? btn.textContent : "🔊";
-
-        if (btn) {
-            btn.disabled = true;
-            btn.classList.add("loading");
-            btn.textContent = "...";
+        // ===== 测验 =====
+        function setQuizLang(lang) {
+            currentQuizLang = lang;
+            document.querySelectorAll(".quiz-lang-btn").forEach(btn => {
+                btn.classList.toggle("active", btn.textContent.replace(/[🀄🔤 ]/g, "") === lang || btn.textContent === lang);
+            });
         }
 
-        try {
-            await playWordByNetwork(word, lang);
-        } catch (err) {
-            const ok = fallbackSpeak(word, lang);
-            if (!ok) {
-                alert("发音失败：网络语音不可用，且浏览器语音不可用");
-            }
-        } finally {
-            if (btn) {
-                btn.disabled = false;
-                btn.classList.remove("loading");
-                btn.textContent = oldText;
-            }
+        function getQuizPool() {
+            if (currentQuizLang === "全部") return data.unlearned;
+            return data.unlearned.filter(w => w.lang === currentQuizLang);
         }
-    }
 
-    function getPronounceUrls(word, lang) {
-        const q = encodeURIComponent(word);
-        if (lang === "中文") {
-            return [
-                "https://fanyi.baidu.com/gettts?lan=zh&text=" + q + "&spd=3&source=web",
-                "https://dict.youdao.com/dictvoice?audio=" + q + "&type=1"
-            ];
-        }
-        return [
-            "https://dict.youdao.com/dictvoice?audio=" + q + "&type=2",
-            "https://fanyi.baidu.com/gettts?lan=en&text=" + q + "&spd=3&source=web"
-        ];
-    }
-
-    async function playWordByNetwork(word, lang) {
-        const urls = getPronounceUrls(word, lang);
-        let lastErr = null;
-        for (const url of urls) {
-            try {
-                await playAudioUrl(url);
+        function nextQuiz() {
+            document.getElementById("quizFeedback").textContent = "";
+            document.getElementById("quizHint").textContent = "";
+            const pool = getQuizPool();
+            if (pool.length === 0) {
+                const wordEl = document.getElementById("quizWord");
+                wordEl.textContent = "🎉";
+                wordEl.className = "quiz-word";
+                document.getElementById("quizHint").textContent =
+                    currentQuizLang === "全部" ? "太棒了！所有字都学会了！"
+                    : `${currentQuizLang}词汇全部学完了！`;
+                currentWord = null;
                 return;
-            } catch (err) {
-                lastErr = err;
             }
+            currentWord = pool[Math.floor(Math.random() * pool.length)];
+            const wordEl = document.getElementById("quizWord");
+            wordEl.textContent = currentWord.word;
+            wordEl.className = "quiz-word" + (currentWord.lang === "英文" ? " en" : "");
         }
-        throw lastErr || new Error("all network tts failed");
-    }
 
-    function playAudioUrl(url) {
-        return new Promise((resolve, reject) => {
-            if (currentAudio) {
-                currentAudio.pause();
-                currentAudio = null;
+        function showHint() {
+            if (!currentWord) return;
+            document.getElementById("quizHint").textContent = currentWord.note
+                ? `💡 提示：${currentWord.note}`
+                : "这个字/词没有添加注释哦";
+        }
+
+        function markLearned() {
+            if (!currentWord) return;
+            const idx = data.unlearned.findIndex(w => w.id === currentWord.id);
+            if (idx > -1) {
+                data.unlearned.splice(idx, 1);
+                data.learned.push(currentWord);
+                data.score += 10;
+                saveData();
+                updateStats();
+            }
+            const fb = document.getElementById("quizFeedback");
+            fb.textContent = PRAISE[Math.floor(Math.random() * PRAISE.length)];
+            fb.style.color = "var(--success)";
+            setTimeout(nextQuiz, 1500);
+        }
+
+        function markUnlearned() {
+            if (!currentWord) return;
+            const fb = document.getElementById("quizFeedback");
+            fb.textContent = ENCOURAGE[Math.floor(Math.random() * ENCOURAGE.length)];
+            fb.style.color = "var(--blue)";
+            setTimeout(nextQuiz, 1500);
+        }
+
+        // ===== 词库 =====
+        function setLangFilter(lang) {
+            currentLangFilter = lang;
+            document.querySelectorAll("#langFilterBar .filter-btn").forEach(btn => {
+                const t = btn.textContent.trim();
+                btn.classList.toggle("active", t === lang || t === "🀄 " + lang || t === "🔤 " + lang || t.includes(lang));
+            });
+            renderWordList();
+        }
+
+        function setStatusFilter(status) {
+            currentStatusFilter = status;
+            document.querySelectorAll("#statusFilterBar .filter-btn").forEach(btn => {
+                const t = btn.textContent.trim();
+                btn.classList.toggle("active", t === status || t.includes(status));
+            });
+            renderWordList();
+        }
+
+        function filterByLang(arr) {
+            if (currentLangFilter === "全部") return arr;
+            return arr.filter(w => w.lang === currentLangFilter);
+        }
+
+        function renderWordList() {
+            const list = document.getElementById("wordList");
+            const unlearnedFiltered = filterByLang(data.unlearned);
+            const learnedFiltered   = filterByLang(data.learned);
+
+            const showUnlearned = currentStatusFilter === "全部" || currentStatusFilter === "未学";
+            const showLearned   = currentStatusFilter === "全部" || currentStatusFilter === "已学";
+
+            if (unlearnedFiltered.length + learnedFiltered.length === 0) {
+                list.innerHTML = '<div class="empty-msg">📚 还没有生字哦，快去录入吧！</div>';
+                return;
             }
 
-            const audio = new Audio(url);
-            let done = false;
-            const timeout = setTimeout(() => finish(false, new Error("audio timeout")), 6000);
+            let html = "";
 
-            function finish(success, err) {
-                if (done) return;
-                done = true;
-                clearTimeout(timeout);
-                audio.onplaying = null;
-                audio.onerror = null;
-                if (!success) {
-                    try { audio.pause(); } catch (_) {}
-                    reject(err || new Error("audio play failed"));
-                    return;
+            if (showUnlearned) {
+                if (unlearnedFiltered.length === 0) {
+                    if (currentStatusFilter === "未学") {
+                        html += '<div class="empty-msg">📖 没有未学的字词哦！</div>';
+                    }
+                } else {
+                    html += `
+                        <div class="group-header unlearned">
+                            📖 未学
+                            <span class="group-count">${unlearnedFiltered.length} 个</span>
+                        </div>
+                    `;
+                    html += unlearnedFiltered.map(item => renderWordItem(item, "未学")).join("");
                 }
-                currentAudio = audio;
-                resolve();
             }
 
-            audio.onplaying = () => finish(true);
-            audio.onerror = () => finish(false, new Error("audio error"));
-
-            const p = audio.play();
-            if (p && typeof p.catch === "function") {
-                p.catch(err => finish(false, err));
+            if (showLearned) {
+                if (learnedFiltered.length === 0) {
+                    if (currentStatusFilter === "已学") {
+                        html += '<div class="empty-msg">⭐ 还没有已学的字词哦！</div>';
+                    }
+                } else {
+                    html += `
+                        <div class="group-header learned">
+                            ⭐ 已学
+                            <span class="group-count">${learnedFiltered.length} 个</span>
+                        </div>
+                    `;
+                    html += learnedFiltered.map(item => renderWordItem(item, "已学")).join("");
+                }
             }
-        });
-    }
 
-    function fallbackSpeak(word, lang) {
-        if (!("speechSynthesis" in window)) return false;
-        try {
-            window.speechSynthesis.cancel();
-            const u = new SpeechSynthesisUtterance(word);
-            u.lang = lang === "英文" ? "en-US" : "zh-CN";
-            u.rate = 0.9;
-            u.pitch = 1;
-            window.speechSynthesis.speak(u);
-            return true;
-        } catch (_) {
-            return false;
+            list.innerHTML = html;
         }
-    }
 
-    loadData();
-    applyTheme(data.themeIndex);
-    updateStats();
-    renderThemeGrid();
+        function renderWordItem(item, status) {
+            const isCN    = (item.lang || "中文") === "中文";
+            const langCls = isCN ? "cn" : "en";
+            const langTxt = isCN ? "中" : "EN";
+            const wordCls = isCN ? "word" : "word en";
+            return `
+                <div class="word-item">
+                    <div class="${wordCls}">${item.word}</div>
+                    <div class="note">${item.note || ""}</div>
+                    <span class="lang-badge ${langCls}">${langTxt}</span>
+                    <button class="del-btn" onclick="deleteWord(${item.id}, '${status}')">✕</button>
+                </div>
+            `;
+        }
 
-    document.getElementById("wordInput").addEventListener("keydown", e => {
-        if (e.key === "Enter") document.getElementById("noteInput").focus();
-    });
-    document.getElementById("noteInput").addEventListener("keydown", e => {
-        if (e.key === "Enter") addWord();
-    });
-</script>
+        function deleteWord(id, status) {
+            if (status === "未学") {
+                data.unlearned = data.unlearned.filter(w => w.id !== id);
+            } else {
+                data.learned = data.learned.filter(w => w.id !== id);
+            }
+            saveData();
+            renderWordList();
+            updateStats();
+        }
+
+        // ===== 初始化 =====
+        loadData();
+        applyTheme(data.themeIndex);
+        updateStats();
+        renderThemeGrid();
+
+        document.getElementById("wordInput").addEventListener("keydown", e => {
+            if (e.key === "Enter") document.getElementById("noteInput").focus();
+        });
+        document.getElementById("noteInput").addEventListener("keydown", e => {
+            if (e.key === "Enter") addWord();
+        });
+    </script>
+</body>
+</html>
