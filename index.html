@@ -24,7 +24,7 @@
             --card-bg: #FFFFFF;
         }
 
-            * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+                * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
     body {
         font-family: -apple-system, "微软雅黑", "PingFang SC", sans-serif;
@@ -363,6 +363,8 @@
     .word-modal {
         width: 100%;
         max-width: 360px;
+        max-height: 80vh;
+        overflow-y: auto;
         background: var(--card-bg);
         border-radius: 16px;
         padding: 18px 16px 14px;
@@ -401,10 +403,31 @@
         background: var(--bg);
         border-radius: 10px;
         padding: 10px 12px;
-        margin: 8px 0 14px;
+        margin: 8px 0;
         min-height: 44px;
         line-height: 1.45;
         word-break: break-word;
+    }
+
+    .word-modal-online {
+        font-size: 14px;
+        color: var(--text);
+        background: rgba(51, 154, 240, 0.08);
+        border-radius: 10px;
+        padding: 10px 12px;
+        margin-bottom: 14px;
+        min-height: 40px;
+        line-height: 1.55;
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+
+    .word-modal-online .label {
+        font-size: 12px;
+        font-weight: bold;
+        color: var(--blue);
+        margin-bottom: 4px;
+        display: block;
     }
 
     .word-modal-actions {
@@ -418,10 +441,9 @@
         border-radius: 12px;
         font-size: 14px;
     }
-    </style>
-</head> 
-<body> <div class="header">~ 生字学习乐园 ~</div> <div class="score-bar" id="scoreBar">🏆 积分：0</div>
-<div class="nav">
+</style>
+    </head> <body> <div class="header">~ 生字学习乐园 ~</div> <div class="score-bar" id="scoreBar">🏆 积分：0</div>
+        <div class="nav">
     <button class="nav-btn active" onclick="switchPage(0)">✏️ 录入</button>
     <button class="nav-btn" onclick="switchPage(1)">🎯 测验</button>
     <button class="nav-btn" onclick="switchPage(2)">📚 词库</button>
@@ -505,6 +527,10 @@
         <div class="word-modal-title" id="modalLang"></div>
         <div class="word-modal-word" id="modalWord"></div>
         <div class="word-modal-note" id="modalNote">暂无注释</div>
+        <div class="word-modal-online" id="modalOnline">
+            <span class="label">🌐 网络释义</span>
+            <span id="modalOnlineText">正在查询...</span>
+        </div>
         <div class="word-modal-actions">
             <button class="btn btn-blue" onclick="speakModalWord()">🔊 发音</button>
             <button class="btn btn-secondary" onclick="closeWordModal()">关闭</button>
@@ -829,7 +855,7 @@
     }
 
     // ===== 词条详情弹框 =====
-    function openWordModal(id, status) {
+    async function openWordModal(id, status) {
         const source = status === "未学" ? data.unlearned : data.learned;
         const item = source.find(w => w.id === id);
         if (!item) return;
@@ -844,8 +870,23 @@
         document.getElementById("modalLang").textContent = isEN ? "英文词条" : "中文词条";
         document.getElementById("modalNote").textContent = item.note ? item.note : "暂无注释";
 
+        const onlineTextEl = document.getElementById("modalOnlineText");
+        onlineTextEl.textContent = "正在查询...";
+
         document.getElementById("wordModalMask").classList.add("show");
         speakModalWord();
+
+        try {
+            const meaning = await fetchOnlineMeaning(item.word, item.lang || "中文");
+            // 若用户已切换到别的词条，丢弃过期结果
+            if (currentModalItem && currentModalItem.id === item.id) {
+                onlineTextEl.textContent = meaning || "未查到网络释义";
+            }
+        } catch (err) {
+            if (currentModalItem && currentModalItem.id === item.id) {
+                onlineTextEl.textContent = "查询失败，请检查网络后重试";
+            }
+        }
     }
 
     function closeWordModal(ev) {
@@ -871,6 +912,37 @@
         window.speechSynthesis.speak(u);
     }
 
+    // ===== 联网查词 =====
+    function stripHtml(html) {
+        const div = document.createElement("div");
+        div.innerHTML = html;
+        return (div.textContent || div.innerText || "").trim();
+    }
+
+    async function fetchOnlineMeaning(word, lang) {
+        const site = lang === "英文" ? "en" : "zh";
+        const url = `https://${site}.wiktionary.org/api/rest_v1/page/definition/${encodeURIComponent(word)}`;
+
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error("lookup failed: " + resp.status);
+        const json = await resp.json();
+
+        const entries = json[site] || Object.values(json)[0];
+        if (!entries || !entries.length) throw new Error("no definition");
+
+        const lines = [];
+        entries.slice(0, 3).forEach(block => {
+            const pos = block.partOfSpeech ? `【${block.partOfSpeech}】` : "";
+            (block.definitions || []).slice(0, 3).forEach(d => {
+                const text = stripHtml(d.definition);
+                if (text) lines.push(pos ? `${pos} ${text}` : text);
+            });
+        });
+
+        if (!lines.length) throw new Error("empty definitions");
+        return lines.join("\n");
+    }
+
     // ===== 初始化 =====
     loadData();
     applyTheme(data.themeIndex);
@@ -887,4 +959,5 @@
         if (e.key === "Escape") closeWordModal();
     });
 </script>
-</body> </html>
+</body> 
+</html>
