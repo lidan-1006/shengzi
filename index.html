@@ -24,7 +24,7 @@
             --card-bg: #FFFFFF;
         }
 
-                * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
     body {
         font-family: -apple-system, "微软雅黑", "PingFang SC", sans-serif;
@@ -442,8 +442,8 @@
         font-size: 14px;
     }
 </style>
-    </head> <body> <div class="header">~ 生字学习乐园 ~</div> <div class="score-bar" id="scoreBar">🏆 积分：0</div>
-        <div class="nav">
+</head> <body> <div class="header">~ 生字学习乐园 ~</div> <div class="score-bar" id="scoreBar">🏆 积分：0</div>
+<div class="nav">
     <button class="nav-btn active" onclick="switchPage(0)">✏️ 录入</button>
     <button class="nav-btn" onclick="switchPage(1)">🎯 测验</button>
     <button class="nav-btn" onclick="switchPage(2)">📚 词库</button>
@@ -528,7 +528,7 @@
         <div class="word-modal-word" id="modalWord"></div>
         <div class="word-modal-note" id="modalNote">暂无注释</div>
         <div class="word-modal-online" id="modalOnline">
-            <span class="label">🌐 网络释义</span>
+            <span class="label">🌐 网络翻译</span>
             <span id="modalOnlineText">正在查询...</span>
         </div>
         <div class="word-modal-actions">
@@ -880,7 +880,7 @@
             const meaning = await fetchOnlineMeaning(item.word, item.lang || "中文");
             // 若用户已切换到别的词条，丢弃过期结果
             if (currentModalItem && currentModalItem.id === item.id) {
-                onlineTextEl.textContent = meaning || "未查到网络释义";
+                onlineTextEl.textContent = meaning || "未查到网络翻译";
             }
         } catch (err) {
             if (currentModalItem && currentModalItem.id === item.id) {
@@ -912,35 +912,26 @@
         window.speechSynthesis.speak(u);
     }
 
-    // ===== 联网查词 =====
-    function stripHtml(html) {
-        const div = document.createElement("div");
-        div.innerHTML = html;
-        return (div.textContent || div.innerText || "").trim();
-    }
-
+    // ===== 联网翻译（MyMemory 免费翻译接口） =====
     async function fetchOnlineMeaning(word, lang) {
-        const site = lang === "英文" ? "en" : "zh";
-        const url = `https://${site}.wiktionary.org/api/rest_v1/page/definition/${encodeURIComponent(word)}`;
+        const isEN = lang === "英文";
+        // 英文词条 -> 查中文翻译；中文词条 -> 查英文翻译，互为参考
+        const langpair = isEN ? "en|zh-CN" : "zh-CN|en";
+        const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(word)}&langpair=${langpair}`;
 
         const resp = await fetch(url);
-        if (!resp.ok) throw new Error("lookup failed: " + resp.status);
+        if (!resp.ok) throw new Error("translate failed: " + resp.status);
         const json = await resp.json();
 
-        const entries = json[site] || Object.values(json)[0];
-        if (!entries || !entries.length) throw new Error("no definition");
+        const text = json && json.responseData && json.responseData.translatedText;
+        if (!text) throw new Error("no translation");
 
-        const lines = [];
-        entries.slice(0, 3).forEach(block => {
-            const pos = block.partOfSpeech ? `【${block.partOfSpeech}】` : "";
-            (block.definitions || []).slice(0, 3).forEach(d => {
-                const text = stripHtml(d.definition);
-                if (text) lines.push(pos ? `${pos} ${text}` : text);
-            });
-        });
+        // 有些情况下接口会原样返回原文，说明没查到有效翻译
+        if (text.trim().toLowerCase() === word.trim().toLowerCase()) {
+            throw new Error("no meaningful translation");
+        }
 
-        if (!lines.length) throw new Error("empty definitions");
-        return lines.join("\n");
+        return text;
     }
 
     // ===== 初始化 =====
@@ -959,5 +950,4 @@
         if (e.key === "Escape") closeWordModal();
     });
 </script>
-</body> 
-</html>
+</body> </html>
